@@ -1,0 +1,231 @@
+#Sales Project SQL Code 
+
+—Confirm data looks right
+SELECT *
+FROM raw_sales
+LIMIT 10;
+
+-- Check missing customer IDs
+SELECT *
+FROM raw_sales
+WHERE "Customer.ID" IS NULL;
+
+— Check data size
+SELECT COUNT(*)
+FROM raw_sales;
+
+
+— Create Customers table
+CREATE TABLE customers AS
+SELECT DISTINCT 
+    "Customer.ID" AS CustomerID,
+    "Customer.Name" AS CustomerName,
+    Segment
+FROM raw_sales;
+
+—Create Products table
+CREATE TABLE products AS
+SELECT DISTINCT 
+    "Product.ID" AS ProductID,
+    "Product.Name" AS ProductName,
+    Category,
+    "Sub.Category" AS SubCategory
+FROM raw_sales;
+
+—Create Orders table 
+CREATE TABLE orders AS
+SELECT 
+    "Order.ID" AS OrderID,
+    "Order.Date" AS OrderDate,
+    "Ship.Date" AS ShipDate,
+    "Customer.ID" AS CustomerID,
+    "Product.ID" AS ProductID,
+    Sales,
+    Quantity,
+    Profit,
+    Discount,
+    Region,
+    Country,
+    City,
+    State,
+    Market
+FROM raw_sales;
+
+—Join test
+SELECT 
+    orders.OrderID,
+    customers.CustomerName,
+    products.ProductName,
+    orders.Sales
+FROM orders
+JOIN customers 
+ON orders.CustomerID = customers.CustomerID
+JOIN products 
+ON orders.ProductID = products.ProductID
+LIMIT 10;
+
+SELECT SUM(Sales) AS TotalRevenue
+FROM orders;
+
+=====
+Overall Performance/KPI Queries 
+
+—Total Revenue 
+SELECT SUM(Sales) AS TotalRevenue
+FROM orders;
+
+—Total Orders
+SELECT COUNT(DISTINCT OrderID) AS TotalOrders
+FROM orders; 
+
+—Average Order Value
+SELECT 
+    SUM(Sales) / COUNT(DISTINCT OrderID) AS AvgOrderValue
+FROM orders;
+
+=====
+Product Performance
+
+—Top products by revenue
+SELECT 
+    orders.ProductID,
+    product_lookup.ProductName,
+    SUM(orders.Sales) AS TotalRevenue
+FROM orders
+JOIN (
+    SELECT 
+        ProductID,
+        MAX(ProductName) AS ProductName
+    FROM products
+    GROUP BY ProductID
+) AS product_lookup
+ON orders.ProductID = product_lookup.ProductID
+GROUP BY orders.ProductID, product_lookup.ProductName
+ORDER BY TotalRevenue DESC
+LIMIT 5;
+
+—Top catergories
+SELECT 
+    Category,
+    SUM(Sales) AS TotalRevenue
+FROM orders
+JOIN (
+    SELECT 
+        ProductID,
+        MAX(Category) AS Category
+    FROM products
+    GROUP BY ProductID
+) AS product_lookup
+ON orders.ProductID = product_lookup.ProductID
+GROUP BY Category
+ORDER BY TotalRevenue DESC;
+
+=====
+Regional Performance
+
+—Revenue by region
+SELECT 
+    Region,
+    SUM(Sales) AS TotalRevenue
+FROM orders
+GROUP BY Region
+ORDER BY TotalRevenue DESC;
+
+=====
+Time Trends Analysis
+
+—Daily trend (raw detail, initial exploration)
+SELECT 
+    OrderDate,
+    SUM(Sales) AS TotalRevenue
+FROM orders
+GROUP BY OrderDate
+ORDER BY OrderDate;
+
+—Monthly trend (clean, final analysis view)
+SELECT 
+    strftime('%Y-%m', OrderDate) AS Month,
+    SUM(Sales) AS TotalRevenue
+FROM orders
+GROUP BY Month
+ORDER BY Month;
+
+====
+Customer Analysis
+
+—Top customers by revenue 
+SELECT 
+    customer_lookup.CustomerName,
+    COUNT(DISTINCT orders.OrderID) AS TotalOrders,
+    SUM(orders.Sales) AS TotalRevenue
+FROM orders
+JOIN (
+    SELECT 
+        CustomerID,
+        MAX(CustomerName) AS CustomerName
+    FROM customers
+    GROUP BY CustomerID
+) AS customer_lookup
+ON orders.CustomerID = customer_lookup.CustomerID
+GROUP BY orders.CustomerID, customer_lookup.CustomerName
+ORDER BY TotalRevenue DESC
+LIMIT 10;
+
+Used COUNT(DISTINCT OrderID) to avoid counting multiple product lines from the same order as separate orders.
+
+—Customers with most orders
+SELECT 
+    customer_lookup.CustomerName,
+    COUNT(DISTINCT orders.OrderID) AS TotalOrders
+FROM orders
+JOIN (
+    SELECT 
+        CustomerID,
+        MAX(CustomerName) AS CustomerName
+    FROM customers
+    GROUP BY CustomerID
+) AS customer_lookup
+ON orders.CustomerID = customer_lookup.CustomerID
+GROUP BY orders.CustomerID, customer_lookup.CustomerName
+ORDER BY TotalOrders DESC
+LIMIT 10;
+
+=====
+Weakness/Opportunity Analysis
+
+—Worst performing products 
+SELECT 
+    orders.ProductID,
+    product_lookup.ProductName,
+    SUM(orders.Sales) AS TotalRevenue
+FROM orders
+JOIN (
+    SELECT 
+        ProductID,
+        MAX(ProductName) AS ProductName
+    FROM products
+    GROUP BY ProductID
+) AS product_lookup
+ON orders.ProductID = product_lookup.ProductID
+GROUP BY orders.ProductID, product_lookup.ProductName
+ORDER BY TotalRevenue ASC
+LIMIT 10;
+
+—Worst performing regions 
+
+SELECT 
+    Region,
+    SUM(Sales) AS TotalRevenue
+FROM orders
+GROUP BY Region
+ORDER BY TotalRevenue ASC;
+
+—Growth/Decline Analysis
+SELECT 
+    strftime('%Y-%m', OrderDate) AS Month,
+    SUM(Sales) AS Revenue,
+    LAG(SUM(Sales)) OVER (ORDER BY strftime('%Y-%m', OrderDate)) AS PreviousMonth,
+    SUM(Sales) - LAG(SUM(Sales)) OVER (ORDER BY strftime('%Y-%m', OrderDate)) AS Growth
+FROM orders
+GROUP BY Month
+ORDER BY Month;
