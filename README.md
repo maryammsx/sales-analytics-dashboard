@@ -1,14 +1,24 @@
-# sales-analytics-dashboard
+# Sales Analytics Dashboard
 
-This project analyses global sales data using SQL and Power BI.
+Interactive sales analytics dashboard built using SQL and Power BI.
 
-The dashboard includes:
-- Revenue and order KPIs
-- Product performance analysis
-- Customer segmentation
-- Regional sales insights
-- Monthly and quarterly trend analysis
+## Project Overview
+This project analyses global sales performance across products, customers, regions, and time trends.
 
-Tools used:
+## Tools Used
 - SQL
 - Power BI
+- Data Visualisation
+- Dashboard Design
+
+## Dashboard Pages
+- Executive Overview
+- Product Analysis
+- Customer Analysis
+- Trend Analysis
+
+## Files Included
+- Power BI dashboard screenshots
+- Exported dashboard PDF
+- SQL query file
+
